@@ -5,6 +5,7 @@
 
 bool checkArg(int argc, char *argv[], char arg, int num = 2);
 QString getDir(int argc, char *argv[]);
+QString getInfoAboutFile(const QFileInfo &fl, bool l);
 
 int main(int argc, char *argv[])
 {
@@ -12,61 +13,30 @@ int main(int argc, char *argv[])
     QFileInfoList content;
 
     //get directory from func getDir(..)
+    //but before it can be file, and i check it by the 'smt'
+    QFileInfo smt(getDir(argc, argv));
     QDir dir(getDir(argc, argv));
 
-    //printf("----->>>>>Directory: %s\n", dir.path().toStdString().c_str());
-
-    //set content by directory from 'dir' (only directories and files)
-    content = dir.entryInfoList(QStringList(QString("*")), QDir::Dirs | QDir::Files);
+    if (smt.isDir())
+    {
+        //set content by directory from 'dir' (only directories and files)
+        if (checkArg(argc, argv, 'd'))
+            content = dir.entryInfoList(QStringList(QString("*")), QDir::Dirs | QDir::Files);
+        else
+            content = dir.entryInfoList(QStringList(QString("*")), QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot);
+    }
+    else
+    {
+        //if smt is not a directory
+        content.append(smt);
+    }
 
     //go to all files
     for(int i = 0; i < content.size(); i++)
     {
         bool canWrite = true;
-        QString str;
-        str = content[i].fileName();
-        //if there is argument -l we write all info about file
-        if (checkArg(argc, argv, 'l'))
-        {
-            //date's created
-            str = content[i].created().toString("MMM dd hh:mm ") + str;
 
-            //size
-            str = QString::number(content[i].size()) + QString(" ") + str;
-
-            //group (if platform does not supported, this will be null-string)
-            str = content[i].group() + " " + str;
-
-            //user
-            str = content[i].owner() + " " + str;
-
-            //rights
-            QString rights;
-            if (content[i].isDir())
-                rights += QString("d");
-            else if (content[i].isSymLink())
-                rights += QString("l");
-            else if (content[i].isBundle())
-                rights += QString("s");
-            else if (content[i].isExecutable())
-                rights += QString("p");
-            else if (content[i].isFile())
-                rights += QString("-");
-            else
-                rights += QString("b");
-
-            rights += content[i].permission(QFile::ReadOwner) ? "r" : "-";
-            rights += content[i].permission(QFile::WriteOwner) ? "w" : "-";
-            rights += content[i].permission(QFile::ExeOwner) ? "x" : "-";
-            rights += content[i].permission(QFile::ReadGroup) ? "r" : "-";
-            rights += content[i].permission(QFile::WriteGroup) ? "w" : "-";
-            rights += content[i].permission(QFile::ExeGroup) ? "x" : "-";
-            rights += content[i].permission(QFile::ReadOther) ? "r" : "-";
-            rights += content[i].permission(QFile::WriteOther) ? "w" : "-";
-            rights += content[i].permission(QFile::ExeOther) ? "x" : "-";
-
-            str = rights + " " + str;
-        }
+        QString str = getInfoAboutFile(content[i], checkArg(argc, argv, 'l'));
 
         //check our argument on '-d'
         if (checkArg(argc, argv, 'd'))
@@ -122,4 +92,54 @@ QString getDir(int argc, char *argv[])
     else
         dir = QString("./");
     return dir;
+}
+
+QString getInfoAboutFile(const QFileInfo &fl, bool l)
+{
+    QString str;
+    str = fl.fileName();
+    //if there is argument -l we write all info about file
+    if (l)
+    {
+        //date's created
+        str = fl.created().toString("MMM dd hh:mm ") + str;
+
+        //size
+        str = QString::number(fl.size()) + QString(" ") + str;
+
+        //group (if platform does not supported, this will be null-string)
+        str = fl.group() + " " + str;
+
+        //user
+        str = fl.owner() + " " + str;
+
+        //rights
+        QString rights;
+        if (fl.isDir())
+            rights += QString("d");
+        else if (fl.isSymLink())
+            rights += QString("l");
+        else if (fl.isBundle())
+            rights += QString("s");
+        else if (fl.isExecutable())
+            rights += QString("p");
+        else if (fl.isFile())
+            rights += QString("-");
+        else
+            rights += QString("b");
+
+        rights += fl.permission(QFile::ReadOwner) ? "r" : "-";
+        rights += fl.permission(QFile::WriteOwner) ? "w" : "-";
+        rights += fl.permission(QFile::ExeOwner) ? "x" : "-";
+        rights += fl.permission(QFile::ReadGroup) ? "r" : "-";
+        rights += fl.permission(QFile::WriteGroup) ? "w" : "-";
+        rights += fl.permission(QFile::ExeGroup) ? "x" : "-";
+        rights += fl.permission(QFile::ReadOther) ? "r" : "-";
+        rights += fl.permission(QFile::WriteOther) ? "w" : "-";
+        rights += fl.permission(QFile::ExeOther) ? "x" : "-";
+
+        str = rights + " " + str;
+    }
+
+    return str;
 }
